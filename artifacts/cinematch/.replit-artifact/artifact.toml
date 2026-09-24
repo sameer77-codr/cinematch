@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CineMatch"
+description = "A personalized movie discovery experience that learns a viewer's taste, explains recommendations, and helps them save what to watch next."
+version = "1.0.0"
+id = "artifacts/cinematch"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22168
+
+[services.development]
+run = "pnpm --filter @workspace/cinematch run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cinematch", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cinematch/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22168"
+BASE_PATH = "/"
