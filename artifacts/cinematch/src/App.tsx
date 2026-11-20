@@ -444,9 +444,17 @@ function readStored<T>(key: string, fallback: T): T {
   }
 }
 
-function CinemaProvider({ children }: { children: ReactNode }) {
-  const [watchlist, setWatchlist] = useState<number[]>(() => readStored('cinematch-watchlist', [2, 7]));
-  const [ratings, setRatings] = useState<Record<number, number>>(() => readStored('cinematch-ratings', { 1: 5, 3: 4 }));
+function CinemaProvider({
+  children,
+  profileId = 'default',
+}: {
+  children: ReactNode;
+  profileId?: string;
+}) {
+    const watchlistKey = `cinematch-${profileId}-watchlist`;
+  const ratingsKey = `cinematch-${profileId}-ratings`;
+    const [watchlist, setWatchlist] = useState<number[]>(() => readStored(watchlistKey, [2, 7]));
+  const [ratings, setRatings] = useState<Record<number, number>>(() => readStored(ratingsKey, { 1: 5, 3: 4 }));
   const [theme, setTheme] = useState<'light' | 'dark'>(() => readStored('cinematch-theme', 'light'));
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
@@ -459,11 +467,12 @@ function CinemaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('cinematch-watchlist', JSON.stringify(watchlist));
-  }, [watchlist]);
-  useEffect(() => {
-    window.localStorage.setItem('cinematch-ratings', JSON.stringify(ratings));
-  }, [ratings]);
+  window.localStorage.setItem(watchlistKey, JSON.stringify(watchlist));
+}, [watchlist, watchlistKey]);
+
+useEffect(() => {
+  window.localStorage.setItem(ratingsKey, JSON.stringify(ratings));
+}, [ratings, ratingsKey]);
   useEffect(() => {
     window.localStorage.setItem('cinematch-theme', JSON.stringify(theme));
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -522,6 +531,10 @@ function NavItem({ href, label, icon: Icon, mobile = false }: { href: string; la
 
 function ShellHeader() {
   const { theme, toggleTheme, searchTerm, setSearchTerm, surprise } = useCinema();
+  const activeProfile = readStored('cinematch-active-profile', {
+  name: 'Alex Morgan',
+  initials: 'AM',
+});
   const [, setLocation] = useLocation();
   const [draft, setDraft] = useState(searchTerm);
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
@@ -555,7 +568,9 @@ function ShellHeader() {
           {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
         </button>
         <Link href="/profile" data-testid="link-header-profile" className="grid h-9 w-9 place-items-center rounded-full bg-secondary text-secondary-foreground transition-transform hover:scale-105">
-          <span className="font-mono-cinema text-[11px]">AM</span>
+          <span className="font-mono-cinema text-[11px]">
+  {activeProfile.initials}
+</span>
         </Link>
       </div>
     </header>
@@ -863,6 +878,10 @@ function RatingsView() {
 
 function ProfileView() {
   const { ratings, watchlist, isLoaded, toggleTheme, theme } = useCinema();
+  const activeProfile = readStored('cinematch-active-profile', {
+  name: 'Alex Morgan',
+  initials: 'AM',
+});
   const signals = [
     { label: 'Quietly emotional', value: 82, color: 'bg-primary' },
     { label: 'Human-scale stories', value: 74, color: 'bg-accent' },
@@ -874,7 +893,17 @@ function ProfileView() {
       <PageIntro eyebrow="Your cinematic fingerprint" title="Taste, in progress." description="A living portrait of the stories you choose, the moods you return to, and the edges we’re still learning." />
       <div className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
         <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-          <div className="flex items-center gap-4 border-b border-border pb-7"><div className="grid h-16 w-16 place-items-center rounded-2xl bg-secondary font-display text-2xl text-secondary-foreground">AM</div><div><h2 className="font-display text-3xl">Alex Morgan</h2><p className="mt-1 text-xs text-muted-foreground">Member since October 2024 · private screening room</p></div></div>
+          <div className="flex items-center gap-4 border-b border-border pb-7">
+  <div className="grid h-16 w-16 place-items-center rounded-2xl bg-secondary font-display text-2xl text-secondary-foreground">
+    {activeProfile.initials}
+  </div>
+  <div>
+    <h2 className="font-display text-3xl">{activeProfile.name}</h2>
+    <p className="mt-1 text-xs text-muted-foreground">
+      Member since October 2024 · private screening room
+    </p>
+  </div>
+</div>
           <div className="mt-7"><div className="mb-5 flex items-end justify-between"><div><div className="font-mono-cinema text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Current signals</div><h3 className="mt-2 font-display text-2xl">What pulls you in</h3></div><span className="font-mono-cinema text-[10px] text-primary">updated now</span></div><div className="space-y-5">{signals.map((signal) => <div key={signal.label}><div className="mb-2 flex justify-between text-xs"><span>{signal.label}</span><span className="font-mono-cinema text-muted-foreground">{signal.value}%</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full rounded-full ${signal.color} transition-all duration-700`} style={{ width: `${signal.value}%` }} /></div></div>)}</div></div>
           <div className="mt-8 rounded-xl bg-muted/60 p-4"><div className="flex items-center gap-2 text-xs font-semibold"><Sparkles size={14} className="text-primary" /> The read</div><p className="mt-2 text-sm leading-6 text-muted-foreground">You prefer films that notice the small things. Your best matches are patient, visually confident, and leave a little room for you to finish the thought.</p></div>
         </section>
@@ -916,10 +945,249 @@ function EmptyState({ title, description, action }: { title: string; description
   return <div className="cinema-grid flex min-h-[390px] flex-col items-center justify-center rounded-2xl border border-dashed border-border px-6 text-center"><div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-secondary text-secondary-foreground"><Film size={23} /></div><h2 className="font-display text-3xl">{title}</h2><p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p><div className="mt-6">{action}</div></div>;
 }
 
+function LoginScreen({
+  onLogin,
+}: {
+  onLogin: (username: string, password: string) => Promise<void>;
+}) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      await onLogin(username, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm"
+      >
+        <div className="mb-6 text-center">
+          <h1 className="text-3xl font-bold">CineMatch</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sign in to discover movies picked for you.
+          </p>
+        </div>
+
+        <label className="mb-2 block text-sm font-medium">Username</label>
+        <input
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          className="mb-4 w-full rounded-lg border bg-background px-3 py-3"
+          placeholder="Enter username"
+          required
+        />
+
+        <label className="mb-2 block text-sm font-medium">Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="mb-4 w-full rounded-lg border bg-background px-3 py-3"
+          placeholder="Enter password"
+          required
+        />
+
+        {error && (
+          <p className="mb-4 text-sm text-red-500">{error}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+
+function ProfileSelector({
+  onSelect,
+  onLogout,
+}: {
+  onSelect: (profile: { id: string; name: string; initials: string }) => void;
+  onLogout: () => void;
+}) {
+  const profiles = [
+    { id: 'sameer', name: 'Sameer Kumar', initials: 'SK' },
+    { id: 'alex', name: 'Alex Morgan', initials: 'AM' },
+  ];
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-lg rounded-2xl border bg-card p-8 shadow-sm">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold">Who's watching?</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Choose your profile to continue to CineMatch.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {profiles.map((profile) => (
+            <button
+              key={profile.id}
+              onClick={() => onSelect(profile)}
+              className="flex flex-col items-center gap-3 rounded-xl border p-6 transition hover:border-primary hover:bg-muted"
+            >
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
+                {profile.initials}
+              </span>
+              <span className="font-medium">{profile.name}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={onLogout}
+          className="mt-8 w-full rounded-lg border px-4 py-3 text-sm font-medium hover:bg-muted"
+        >
+          Log out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+
 function Router() {
   const [location] = useLocation();
-  return <ErrorBoundary resetKey={location}><CinemaProvider><Shell /></CinemaProvider></ErrorBoundary>;
+
+  const [authStatus, setAuthStatus] = useState<'checking' | 'login' | 'profiles' | 'app'>('checking');
+  const [token, setToken] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<{
+    id: string;
+    name: string;
+    initials: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const savedToken = window.localStorage.getItem('cinematch-token');
+
+    if (!savedToken) {
+      setAuthStatus('login');
+      return;
+    }
+
+    fetch('http://localhost:3000/api/auth/verify', {
+      headers: {
+        Authorization: `Bearer ${savedToken}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Session expired');
+        return response.json();
+      })
+      .then((data) => {
+        if (data.authenticated) {
+          setToken(savedToken);
+          setAuthStatus('profiles');
+        } else {
+          throw new Error('Session expired');
+        }
+      })
+      .catch(() => {
+        window.localStorage.removeItem('cinematch-token');
+        setAuthStatus('login');
+      });
+  }, []);
+
+  const handleLogin = async (username: string, password: string) => {
+    const response = await fetch('http://localhost:3000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Invalid login details.');
+    }
+
+    window.localStorage.setItem('cinematch-token', data.token);
+    setToken(data.token);
+    setAuthStatus('profiles');
+  };
+
+  const handleLogout = async () => {
+    if (token) {
+      try {
+        await fetch('http://localhost:3000/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        // Clear the local session even if the server cannot be reached.
+      }
+    }
+
+    window.localStorage.removeItem('cinematch-token');
+    setToken(null);
+    setSelectedProfile(null);
+    setAuthStatus('login');
+  };
+
+  if (authStatus === 'checking') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Checking your session...</p>
+      </div>
+    );
+  }
+
+  if (authStatus === 'login') {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  if (authStatus === 'profiles') {
+    return (
+      <ProfileSelector
+  onSelect={(profile) => {
+    window.localStorage.setItem(
+      'cinematch-active-profile',
+      JSON.stringify(profile)
+    );
+
+    setSelectedProfile(profile);
+    setAuthStatus('app');
+  }}
+  onLogout={handleLogout}
+/>
+    );
+  }
+
+  return (
+    <ErrorBoundary resetKey={location}>
+      <CinemaProvider key={selectedProfile?.id} profileId={selectedProfile?.id || 'default'}>
+        <Shell />
+      </CinemaProvider>
+    </ErrorBoundary>
+  );
 }
+
 
 function App() {
   return (

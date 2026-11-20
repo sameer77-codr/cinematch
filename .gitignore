@@ -52,3 +52,11 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+# Temporary SQLite files
+*.db-shm
+*.db-wal
+
+# Local backups and generated logs
+artifacts/cinematch/src/App-backup.tsx
+pnpm-workspace.zip
+resolution-log.txt
