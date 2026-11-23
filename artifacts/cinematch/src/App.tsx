@@ -4,6 +4,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import {
   ArrowRight,
   Bookmark,
@@ -1087,8 +1089,8 @@ function Router() {
       return;
     }
 
-    fetch('http://localhost:3000/api/auth/verify', {
-      headers: {
+fetch(`${API_BASE_URL}/api/auth/verify`, {
+        headers: {
         Authorization: `Bearer ${savedToken}`,
       },
     })
@@ -1111,7 +1113,7 @@ function Router() {
   }, []);
 
   const handleLogin = async (username: string, password: string) => {
-    const response = await fetch('http://localhost:3000/api/auth/login', {
+   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1133,7 +1135,7 @@ function Router() {
   const handleLogout = async () => {
     if (token) {
       try {
-        await fetch('http://localhost:3000/api/auth/logout', {
+        await fetch(`${API_BASE_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
